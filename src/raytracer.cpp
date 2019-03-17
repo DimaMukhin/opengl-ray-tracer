@@ -69,29 +69,84 @@ void choose_scene(char const *fn) {
 }
 
 bool trace(const point3 &e, const point3 &s, colour3 &colour, bool pick) {
-	// NOTE: This is a demo, not ray tracing code! You will need to replace all of this with your own code...
-
 	// traverse the objects
 	json &objects = scene["objects"];
 	for (json::iterator it = objects.begin(); it != objects.end(); ++it) {
 		json &object = *it;
 		
-		// every object in the scene will have a "type"
+		// TODO: implement "depth buffer" because right now you just take first hit instead of closest hit
+
 		if (object["type"] == "sphere") {
-			// This is NOT ray-sphere intersection
-			// Every sphere will have a position and a radius
-			std::vector<float> pos = object["position"];
-			point3 p = -(s - e) * pos[2];
-			if (glm::length(glm::vec3(p.x - pos[0],p.y - pos[1],0)) < float(object["radius"])) {
-				// Every object will have a material
-				json &material = object["material"];
-				std::vector<float> diffuse = material["diffuse"];
-				colour = vector_to_vec3(diffuse);
-				// This is NOT correct: it finds the first hit, not the closest
+			
+			point3 c = vector_to_vec3(object["position"]);
+			float R = float(object["radius"]);
+			point3 p;
+
+			if (raySphereIntersection(e, s, c, R, p)) {
+				colour = colour3(1.0, 0.0, 0.0);
 				return true;
 			}
+		}
+
+		if (object["type"] == "sphere") {
+
 		}
 	}
 
 	return false;
 }
+
+bool raySphereIntersection(point3 e, point3 s, point3 c, float R, point3 &p) {
+	glm::vec3 d = s - e;
+
+	float discriminant = std::pow(glm::dot(d, e - c), 2.0) - (glm::dot(d, d) * (glm::dot(e - c, e - c) - std::pow(R, 2.0)));
+	if (discriminant < 0)
+		return false;
+
+	float rootDiscriminant = std::sqrt(discriminant);
+
+	float t1 = (glm::dot(-d, e - c) - rootDiscriminant) / glm::dot(d, d);
+	float t2 = (glm::dot(-d, e - c) + rootDiscriminant) / glm::dot(d, d);
+
+	if (t1 < 1 && t2 < 1) {
+		return false;
+	}
+	else if (t1 <= t2 && t1 >= 1) {
+		p = e + d * t1;
+		return true;
+	}
+	else if (t2 <= t1 && t2 >= 1) {
+		p = e + d * t2;
+	}
+	else {
+		return false;
+	}
+}
+
+//bool trace(const point3 &e, const point3 &s, colour3 &colour, bool pick) {
+//	// NOTE: This is a demo, not ray tracing code! You will need to replace all of this with your own code...
+//
+//	// traverse the objects
+//	json &objects = scene["objects"];
+//	for (json::iterator it = objects.begin(); it != objects.end(); ++it) {
+//		json &object = *it;
+//
+//		// every object in the scene will have a "type"
+//		if (object["type"] == "sphere") {
+//			// This is NOT ray-sphere intersection
+//			// Every sphere will have a position and a radius
+//			std::vector<float> pos = object["position"];
+//			point3 p = -(s - e) * pos[2];
+//			if (glm::length(glm::vec3(p.x - pos[0], p.y - pos[1], 0)) < float(object["radius"])) {
+//				// Every object will have a material
+//				json &material = object["material"];
+//				std::vector<float> diffuse = material["diffuse"];
+//				colour = vector_to_vec3(diffuse);
+//				// This is NOT correct: it finds the first hit, not the closest
+//				return true;
+//			}
+//		}
+//	}
+//
+//	return false;
+//}
