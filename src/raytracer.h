@@ -8,5 +8,6 @@ extern colour3 background_colour;
 
 void choose_scene(char const *fn);
 bool trace(const point3 &e, const point3 &s, colour3 &colour, bool pick);
+bool rayTriangleIntersection(point3 e, point3 s, point3 a, point3 b, point3 c, glm::vec3 n, point3 &p);
 bool rayPlaneIntersection(point3 e, point3 s, point3 a, glm::vec3 n, point3 &p);
 bool raySphereIntersection(point3 e, point3 s, point3 c, float R, point3 &p);

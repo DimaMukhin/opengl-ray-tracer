@@ -103,13 +103,48 @@ bool trace(const point3 &e, const point3 &s, colour3 &colour, bool pick) {
 				return true;
 			}
 		}
+
+		if (object["type"] == "mesh") {
+			std::vector<std::vector<std::vector<float>>> triangles = object["triangles"];
+
+			for (int i = 0; i < triangles.size(); i++) {
+				std::vector<std::vector<float>> triangle = triangles[i];
+				point3 a = vector_to_vec3(triangle[0]);
+				point3 b = vector_to_vec3(triangle[1]);
+				point3 c = vector_to_vec3(triangle[2]);
+				glm::vec3 n = glm::normalize(glm::cross(c - b, a - b));
+
+				if (rayTriangleIntersection(e, s, a, b, c, n, p)) {
+					glm::vec3 kd = vector_to_vec3(material["diffuse"]);
+
+					// TODO: implement light
+					colour = kd;
+					return true;
+				}
+			}
+		}
 	}
 
 	return false;
 }
 
 bool rayTriangleIntersection(point3 e, point3 s, point3 a, point3 b, point3 c, glm::vec3 n, point3 &p) {
+	point3 x;
 
+	rayPlaneIntersection(e, s, a, n, x);
+
+	if (rayPlaneIntersection(e, s, x, n, x)) {
+		float term1 = glm::dot(glm::cross((b - a), (x - a)), n);
+		float term2 = glm::dot(glm::cross((c - b), (x - b)), n);
+		float term3 = glm::dot(glm::cross((a - c), (x - c)), n);
+
+		if (term1 > 0 && term2 > 0 && term3 > 0) {
+			p = x;
+			return true;
+		}
+	}
+
+	return false;
 }
 
 bool rayPlaneIntersection(point3 e, point3 s, point3 a, glm::vec3 n, point3 &p) {
