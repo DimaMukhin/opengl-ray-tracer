@@ -73,24 +73,58 @@ bool trace(const point3 &e, const point3 &s, colour3 &colour, bool pick) {
 	json &objects = scene["objects"];
 	for (json::iterator it = objects.begin(); it != objects.end(); ++it) {
 		json &object = *it;
-		
+		json &material = object["material"];
+		point3 p;
+
 		// TODO: implement "depth buffer" because right now you just take first hit instead of closest hit
 
 		if (object["type"] == "sphere") {
-			
 			point3 c = vector_to_vec3(object["position"]);
 			float R = float(object["radius"]);
-			point3 p;
 
 			if (raySphereIntersection(e, s, c, R, p)) {
-				colour = colour3(1.0, 0.0, 0.0);
+				glm::vec3 kd = vector_to_vec3(material["diffuse"]);
+
+				// TODO: implement light
+				colour = kd;
 				return true;
 			}
 		}
 
-		if (object["type"] == "sphere") {
+		if (object["type"] == "plane") {
+			point3 a = vector_to_vec3(object["position"]);
+			glm::vec3 n = vector_to_vec3(object["normal"]);
 
+			if (rayPlaneIntersection(e, s, a, n, p)) {
+				glm::vec3 kd = vector_to_vec3(material["diffuse"]);
+
+				// TODO: implement light
+				colour = kd;
+				return true;
+			}
 		}
+	}
+
+	return false;
+}
+
+bool rayTriangleIntersection(point3 e, point3 s, point3 a, point3 b, point3 c, glm::vec3 n, point3 &p) {
+
+}
+
+bool rayPlaneIntersection(point3 e, point3 s, point3 a, glm::vec3 n, point3 &p) {
+	glm::vec3 d = s - e;
+
+	float denominator = glm::dot(n, d);
+
+	if (denominator != 0) {
+		float t = glm::dot(n, a - e) / denominator;
+		p = e + d * t;
+
+		if (t < 1)
+			return false;
+
+		return true;
 	}
 
 	return false;
