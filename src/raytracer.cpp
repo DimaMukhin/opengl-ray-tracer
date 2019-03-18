@@ -2,16 +2,6 @@
 
 #include "raytracer.h"
 
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <glm/glm.hpp>
-#include <glm/gtx/string_cast.hpp>
-
-#include "json.hpp"
-
-using json = nlohmann::json;
-
 const char *PATH = "scenes/";
 
 double fov = 60;
@@ -72,7 +62,7 @@ bool trace(const point3 &e, const point3 &s, colour3 &colour, bool pick) {
 	// traverse the objects
 	bool hit = false;
 
-	// TODO: think about implementing a better "deapth buffer"
+	// TODO: think about implementing a better "deapth buffer" we can use find() to do this easily
 	float minT = -1;
 
 	json &objects = scene["objects"];
@@ -86,10 +76,10 @@ bool trace(const point3 &e, const point3 &s, colour3 &colour, bool pick) {
 			float R = float(object["radius"]);
 
 			if (raySphereIntersection(e, s, c, R, t) && (t < minT || !hit)) {
-				glm::vec3 kd = vector_to_vec3(material["diffuse"]);
+				point3 p = e + (s - e) * t;
 
 				// TODO: implement light
-				colour = kd;
+				colour = light(e, p, glm::normalize(p - c), material);
 
 				minT = t;
 				hit = true;
@@ -98,13 +88,13 @@ bool trace(const point3 &e, const point3 &s, colour3 &colour, bool pick) {
 
 		if (object["type"] == "plane") {
 			point3 a = vector_to_vec3(object["position"]);
-			glm::vec3 n = vector_to_vec3(object["normal"]);
+			glm::vec3 n = glm::normalize(vector_to_vec3(object["normal"]));
 
 			if (rayPlaneIntersection(e, s, a, n, t) && (t < minT || !hit)) {
-				glm::vec3 kd = vector_to_vec3(material["diffuse"]);
+				point3 p = e + (s - e) * t;
 
 				// TODO: implement light
-				colour = kd;
+				colour = light(e, p, n, material);
 				
 				minT = t;
 				hit = true;
@@ -119,13 +109,13 @@ bool trace(const point3 &e, const point3 &s, colour3 &colour, bool pick) {
 				point3 a = vector_to_vec3(triangle[0]);
 				point3 b = vector_to_vec3(triangle[1]);
 				point3 c = vector_to_vec3(triangle[2]);
-				glm::vec3 n = glm::normalize(glm::cross(c - b, a - b));
+				glm::vec3 n = glm::normalize(glm::cross(b - a, c - b));
 
 				if (rayTriangleIntersection(e, s, a, b, c, n, t) && (t < minT || !hit)) {
-					glm::vec3 kd = vector_to_vec3(material["diffuse"]);
+					point3 p = e + (s - e) * t;
 
 					// TODO: implement light
-					colour = kd;
+					colour = light(e, p, n, material);
 					
 					minT = t;
 					hit = true;
@@ -137,7 +127,51 @@ bool trace(const point3 &e, const point3 &s, colour3 &colour, bool pick) {
 	return hit;
 }
 
+colour3 light(point3 e, point3 p, glm::vec3 n, json material) {
+	colour3 color = colour3(0, 0, 0);
+
+	json &lights = scene["lights"];
+
+	n = glm::normalize(n);
+	glm::vec3 v = glm::normalize(e - p);
+
+	for (json::iterator it = lights.begin(); it != lights.end(); ++it) {
+		json &light = *it;
+
+		if (light["type"] == "ambient") {
+			colour3 ia = vector_to_vec3(light["color"]);
+			colour3 ka = vector_to_vec3(material["ambient"]);
+			color += ia * ka;
+		}
+
+		// TODO: do we calculate ambient + diffuse + specular?
+		if (light["type"] == "directional") {
+			glm::vec3 direction = vector_to_vec3(light["direction"]);
+			glm::vec3 id = vector_to_vec3(light["color"]);
+			colour3 kd = vector_to_vec3(material["diffuse"]);
+
+			glm::vec3 l = glm::normalize(-direction);
+
+			color += id * kd * (glm::dot(n, l));
+		}
+
+		// TODO: do we calculate ambient + diffuse + specular?
+		if (light["type"] == "point") {
+			point3 lightPosition = vector_to_vec3(light["position"]);
+			glm::vec3 id = vector_to_vec3(light["color"]);
+			colour3 kd = vector_to_vec3(material["diffuse"]);
+
+			glm::vec3 l = glm::normalize(lightPosition - p);
+
+			color += id * kd * (glm::dot(n, l));
+		}
+	}
+
+	return color;
+}
+
 bool rayTriangleIntersection(point3 e, point3 s, point3 a, point3 b, point3 c, glm::vec3 n, float &t) {
+	n = glm::normalize(n);
 	float planeT;
 
 	if (rayPlaneIntersection(e, s, a, n, planeT)) {
@@ -158,6 +192,7 @@ bool rayTriangleIntersection(point3 e, point3 s, point3 a, point3 b, point3 c, g
 }
 
 bool rayPlaneIntersection(point3 e, point3 s, point3 a, glm::vec3 n, float &t) {
+	n = glm::normalize(n);
 	glm::vec3 d = s - e;
 
 	float denominator = glm::dot(n, d);
