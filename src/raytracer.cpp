@@ -70,24 +70,29 @@ void choose_scene(char const *fn) {
 
 bool trace(const point3 &e, const point3 &s, colour3 &colour, bool pick) {
 	// traverse the objects
+	bool hit = false;
+
+	// TODO: think about implementing a better "deapth buffer"
+	float minT = -1;
+
 	json &objects = scene["objects"];
 	for (json::iterator it = objects.begin(); it != objects.end(); ++it) {
 		json &object = *it;
 		json &material = object["material"];
-		point3 p;
-
-		// TODO: implement "depth buffer" because right now you just take first hit instead of closest hit
+		float t;
 
 		if (object["type"] == "sphere") {
 			point3 c = vector_to_vec3(object["position"]);
 			float R = float(object["radius"]);
 
-			if (raySphereIntersection(e, s, c, R, p)) {
+			if (raySphereIntersection(e, s, c, R, t) && (t < minT || !hit)) {
 				glm::vec3 kd = vector_to_vec3(material["diffuse"]);
 
 				// TODO: implement light
 				colour = kd;
-				return true;
+
+				minT = t;
+				hit = true;
 			}
 		}
 
@@ -95,12 +100,14 @@ bool trace(const point3 &e, const point3 &s, colour3 &colour, bool pick) {
 			point3 a = vector_to_vec3(object["position"]);
 			glm::vec3 n = vector_to_vec3(object["normal"]);
 
-			if (rayPlaneIntersection(e, s, a, n, p)) {
+			if (rayPlaneIntersection(e, s, a, n, t) && (t < minT || !hit)) {
 				glm::vec3 kd = vector_to_vec3(material["diffuse"]);
 
 				// TODO: implement light
 				colour = kd;
-				return true;
+				
+				minT = t;
+				hit = true;
 			}
 		}
 
@@ -114,32 +121,35 @@ bool trace(const point3 &e, const point3 &s, colour3 &colour, bool pick) {
 				point3 c = vector_to_vec3(triangle[2]);
 				glm::vec3 n = glm::normalize(glm::cross(c - b, a - b));
 
-				if (rayTriangleIntersection(e, s, a, b, c, n, p)) {
+				if (rayTriangleIntersection(e, s, a, b, c, n, t) && (t < minT || !hit)) {
 					glm::vec3 kd = vector_to_vec3(material["diffuse"]);
 
 					// TODO: implement light
 					colour = kd;
-					return true;
+					
+					minT = t;
+					hit = true;
 				}
 			}
 		}
 	}
 
-	return false;
+	return hit;
 }
 
-bool rayTriangleIntersection(point3 e, point3 s, point3 a, point3 b, point3 c, glm::vec3 n, point3 &p) {
-	point3 x;
+bool rayTriangleIntersection(point3 e, point3 s, point3 a, point3 b, point3 c, glm::vec3 n, float &t) {
+	float planeT;
 
-	rayPlaneIntersection(e, s, a, n, x);
+	if (rayPlaneIntersection(e, s, a, n, planeT)) {
+		glm::vec3 d = s - e;
+		point3 x = e + d * planeT;
 
-	if (rayPlaneIntersection(e, s, x, n, x)) {
 		float term1 = glm::dot(glm::cross((b - a), (x - a)), n);
 		float term2 = glm::dot(glm::cross((c - b), (x - b)), n);
 		float term3 = glm::dot(glm::cross((a - c), (x - c)), n);
 
 		if (term1 > 0 && term2 > 0 && term3 > 0) {
-			p = x;
+			t = planeT;
 			return true;
 		}
 	}
@@ -147,14 +157,13 @@ bool rayTriangleIntersection(point3 e, point3 s, point3 a, point3 b, point3 c, g
 	return false;
 }
 
-bool rayPlaneIntersection(point3 e, point3 s, point3 a, glm::vec3 n, point3 &p) {
+bool rayPlaneIntersection(point3 e, point3 s, point3 a, glm::vec3 n, float &t) {
 	glm::vec3 d = s - e;
 
 	float denominator = glm::dot(n, d);
 
 	if (denominator != 0) {
-		float t = glm::dot(n, a - e) / denominator;
-		p = e + d * t;
+		t = glm::dot(n, a - e) / denominator;
 
 		if (t < 1)
 			return false;
@@ -165,7 +174,7 @@ bool rayPlaneIntersection(point3 e, point3 s, point3 a, glm::vec3 n, point3 &p) 
 	return false;
 }
 
-bool raySphereIntersection(point3 e, point3 s, point3 c, float R, point3 &p) {
+bool raySphereIntersection(point3 e, point3 s, point3 c, float R, float &t) {
 	glm::vec3 d = s - e;
 
 	float discriminant = std::pow(glm::dot(d, e - c), 2.0) - (glm::dot(d, d) * (glm::dot(e - c, e - c) - std::pow(R, 2.0)));
@@ -181,11 +190,12 @@ bool raySphereIntersection(point3 e, point3 s, point3 c, float R, point3 &p) {
 		return false;
 	}
 	else if (t1 <= t2 && t1 >= 1) {
-		p = e + d * t1;
+		t = t1;
 		return true;
 	}
 	else if (t2 <= t1 && t2 >= 1) {
-		p = e + d * t2;
+		float t = t2;
+		return true;
 	}
 	else {
 		return false;
