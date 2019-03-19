@@ -59,50 +59,68 @@ void choose_scene(char const *fn) {
 }
 
 bool trace(const point3 &e, const point3 &s, colour3 &colour, bool pick) {
-	// traverse the objects
-	bool hit = false;
+	return castRay(e, s, colour);
+}
 
-	// TODO: think about implementing a better "deapth buffer" we can use find() to do this easily
-	float minT = -1;
+bool castRay(const point3 &e, const point3 &s, colour3 &colour) {
+	json object;
+	glm::vec3 n;
+	float t;
+
+	t = intersect(e, s, n, object);
+
+	if (t < 0)
+		return false;
+
+	point3 p = e + (s - e) * t;
+
+	colour = light(e, p, n, object["material"]);
+
+	return true;
+}
+
+float intersect(point3 e, point3 s, glm::vec3 &normal, json &object) {
+	bool hit = false;
+	float minT = -1.0f;
+	float safeT = 0.001f;
 
 	json &objects = scene["objects"];
 	for (json::iterator it = objects.begin(); it != objects.end(); ++it) {
-		json &object = *it;
-		json &material = object["material"];
-		float t;
+		json &currObject = *it;
+		float currT;
 
-		if (object["type"] == "sphere") {
-			point3 c = vector_to_vec3(object["position"]);
-			float R = float(object["radius"]);
+		if (currObject["type"] == "sphere") {
+			point3 c = vector_to_vec3(currObject["position"]);
+			float R = float(currObject["radius"]);
 
-			if (raySphereIntersection(e, s, c, R, t) && (t < minT || !hit)) {
-				point3 p = e + (s - e) * t;
-
-				// TODO: implement light
-				colour = light(e, p, glm::normalize(p - c), material);
-
-				minT = t;
+			if (raySphereIntersection(e, s, c, R, currT) && currT > safeT && (currT < minT || !hit)) {
 				hit = true;
-			}
-		}
-
-		if (object["type"] == "plane") {
-			point3 a = vector_to_vec3(object["position"]);
-			glm::vec3 n = glm::normalize(vector_to_vec3(object["normal"]));
-
-			if (rayPlaneIntersection(e, s, a, n, t) && (t < minT || !hit)) {
-				point3 p = e + (s - e) * t;
-
-				// TODO: implement light
-				colour = light(e, p, n, material);
+				minT = currT;
+				object = currObject;
 				
-				minT = t;
-				hit = true;
+				// getting sphere normal
+				point3 p = e + (s - e) * currT;
+				normal = glm::normalize(p - c);
+
+				continue;
 			}
 		}
 
-		if (object["type"] == "mesh") {
-			std::vector<std::vector<std::vector<float>>> triangles = object["triangles"];
+		if (currObject["type"] == "plane") {
+			point3 a = vector_to_vec3(currObject["position"]);
+			glm::vec3 n = glm::normalize(vector_to_vec3(currObject["normal"]));
+
+			if (rayPlaneIntersection(e, s, a, n, currT) && currT > safeT && (currT < minT || !hit)) {
+				hit = true;
+				minT = currT;
+				object = currObject;
+				normal = n;
+				continue;
+			}
+		}
+
+		if (currObject["type"] == "mesh") {
+			std::vector<std::vector<std::vector<float>>> triangles = currObject["triangles"];
 
 			for (int i = 0; i < triangles.size(); i++) {
 				std::vector<std::vector<float>> triangle = triangles[i];
@@ -111,20 +129,18 @@ bool trace(const point3 &e, const point3 &s, colour3 &colour, bool pick) {
 				point3 c = vector_to_vec3(triangle[2]);
 				glm::vec3 n = glm::normalize(glm::cross(b - a, c - b));
 
-				if (rayTriangleIntersection(e, s, a, b, c, n, t) && (t < minT || !hit)) {
-					point3 p = e + (s - e) * t;
-
-					// TODO: implement light
-					colour = light(e, p, n, material);
-					
-					minT = t;
+				if (rayTriangleIntersection(e, s, a, b, c, n, currT) && currT > safeT && (currT < minT || !hit)) {
 					hit = true;
+					minT = currT;
+					object = currObject;
+					normal = n;
+					continue;
 				}
 			}
 		}
 	}
 
-	return hit;
+	return minT;
 }
 
 colour3 light(point3 e, point3 p, glm::vec3 n, json material) {
@@ -236,6 +252,75 @@ bool raySphereIntersection(point3 e, point3 s, point3 c, float R, float &t) {
 		return false;
 	}
 }
+
+//bool trace(const point3 &e, const point3 &s, colour3 &colour, bool pick) {
+//	// traverse the objects
+//	bool hit = false;
+//
+//	// TODO: think about implementing a better "deapth buffer" we can use find() to do this easily
+//	float minT = -1;
+//
+//	json &objects = scene["objects"];
+//	for (json::iterator it = objects.begin(); it != objects.end(); ++it) {
+//		json &object = *it;
+//		json &material = object["material"];
+//		float t;
+//
+//		if (object["type"] == "sphere") {
+//			point3 c = vector_to_vec3(object["position"]);
+//			float R = float(object["radius"]);
+//
+//			if (raySphereIntersection(e, s, c, R, t) && (t < minT || !hit)) {
+//				point3 p = e + (s - e) * t;
+//
+//				// TODO: implement light
+//				colour = light(e, p, glm::normalize(p - c), material);
+//
+//				minT = t;
+//				hit = true;
+//			}
+//		}
+//
+//		if (object["type"] == "plane") {
+//			point3 a = vector_to_vec3(object["position"]);
+//			glm::vec3 n = glm::normalize(vector_to_vec3(object["normal"]));
+//
+//			if (rayPlaneIntersection(e, s, a, n, t) && (t < minT || !hit)) {
+//				point3 p = e + (s - e) * t;
+//
+//				// TODO: implement light
+//				colour = light(e, p, n, material);
+//
+//				minT = t;
+//				hit = true;
+//			}
+//		}
+//
+//		if (object["type"] == "mesh") {
+//			std::vector<std::vector<std::vector<float>>> triangles = object["triangles"];
+//
+//			for (int i = 0; i < triangles.size(); i++) {
+//				std::vector<std::vector<float>> triangle = triangles[i];
+//				point3 a = vector_to_vec3(triangle[0]);
+//				point3 b = vector_to_vec3(triangle[1]);
+//				point3 c = vector_to_vec3(triangle[2]);
+//				glm::vec3 n = glm::normalize(glm::cross(b - a, c - b));
+//
+//				if (rayTriangleIntersection(e, s, a, b, c, n, t) && (t < minT || !hit)) {
+//					point3 p = e + (s - e) * t;
+//
+//					// TODO: implement light
+//					colour = light(e, p, n, material);
+//
+//					minT = t;
+//					hit = true;
+//				}
+//			}
+//		}
+//	}
+//
+//	return hit;
+//}
 
 //bool trace(const point3 &e, const point3 &s, colour3 &colour, bool pick) {
 //	// NOTE: This is a demo, not ray tracing code! You will need to replace all of this with your own code...
