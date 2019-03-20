@@ -93,6 +93,19 @@ bool castRay(const point3 &e, const point3 &s, colour3 &colour) {
 		}
 	}
 
+	// TODO: refactor into own function
+	// TODO: implement recursion depth break case
+	if (material.find("transparency") != material.end()) {
+		float kt = material["transparency"];
+		colour3 hitColor;
+		if (castRay(p, p + (s - e), hitColor)) {
+			colour = (1 - kt) * colour + hitColor * kt;
+		}
+		else {
+			colour = (1 - kt) * colour + background_colour * kt;
+		}
+	}
+
 	return true;
 }
 
