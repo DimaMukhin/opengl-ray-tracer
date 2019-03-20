@@ -64,6 +64,13 @@
       "type":     "point",
       "color":    [0.8, 0.8, 0],
       "position": [-1, 8, -5]
+    },
+	{
+      "type":     "spot",
+      "color":    [0.8, 0.8, 0.8],
+      "position": [-2.0, 0, -4],
+	  "direction": [1, 0, 0],
+	  "cutoff": 30.0
     }
   ]
 }

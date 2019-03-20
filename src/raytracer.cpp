@@ -165,7 +165,6 @@ colour3 light(point3 e, point3 p, glm::vec3 n, json material) {
 
 		if (light["type"] == "directional") {
 			glm::vec3 direction = vector_to_vec3(light["direction"]);
-			colour3 id = vector_to_vec3(light["color"]);
 			glm::vec3 l = glm::normalize(-direction);
 
 			// dont light it if light doesnt reach it
@@ -174,6 +173,7 @@ colour3 light(point3 e, point3 p, glm::vec3 n, json material) {
 			}
 
 			// diffuse
+			colour3 id = vector_to_vec3(light["color"]);
 			colour3 kd = vector_to_vec3(material["diffuse"]);
 			color += id * kd * (glm::dot(n, l));
 
@@ -194,7 +194,6 @@ colour3 light(point3 e, point3 p, glm::vec3 n, json material) {
 
 		if (light["type"] == "point") {
 			point3 lightPosition = vector_to_vec3(light["position"]);
-			glm::vec3 id = vector_to_vec3(light["color"]);
 			glm::vec3 l = glm::normalize(lightPosition - p);
 
 			// dont add color if light doesnt reach the point
@@ -203,6 +202,43 @@ colour3 light(point3 e, point3 p, glm::vec3 n, json material) {
 			}
 
 			// diffuse
+			glm::vec3 id = vector_to_vec3(light["color"]);
+			colour3 kd = vector_to_vec3(material["diffuse"]);
+			color += id * kd * (glm::dot(n, l));
+
+			// specular if material supports specular component
+			if (material.find("specular") != material.end()) {
+				colour3 is = vector_to_vec3(light["color"]);
+				colour3 ks = vector_to_vec3(material["specular"]);
+				float alpha = material["shininess"];
+				glm::vec3 h = glm::normalize(l + v);
+
+				float dotP = glm::dot(n, h);
+				if (dotP < 0.0f) dotP = 0.0f;
+				color += is * ks * std::pow(dotP, alpha);
+			}
+
+			continue;
+		}
+
+		if (light["type"] == "spot") {
+			point3 lightPosition = vector_to_vec3(light["position"]);
+			glm::vec3 direction = glm::normalize(vector_to_vec3(light["direction"]));
+			glm::vec3 l = glm::normalize(lightPosition - p);
+			float cutoff = light["cutoff"];
+
+			// dont calculate light if point is outside the cutoff angle
+			if (glm::dot(l, -direction) < glm::cos(glm::radians(cutoff / 2))) {
+				continue;
+			}
+
+			// dont add color if light doesnt reach the point
+			if (pointInShadow(p, lightPosition)) {
+				continue;
+			}
+
+			// diffuse
+			glm::vec3 id = vector_to_vec3(light["color"]);
 			colour3 kd = vector_to_vec3(material["diffuse"]);
 			color += id * kd * (glm::dot(n, l));
 
@@ -277,6 +313,7 @@ bool rayPlaneIntersection(point3 e, point3 s, point3 a, glm::vec3 n, float &t) {
 
 bool raySphereIntersection(point3 e, point3 s, point3 c, float R, float &t) {
 	glm::vec3 d = s - e;
+	float safeT = 0.001f;
 
 	float discriminant = std::pow(glm::dot(d, e - c), 2.0) - (glm::dot(d, d) * (glm::dot(e - c, e - c) - std::pow(R, 2.0)));
 	if (discriminant < 0)
@@ -287,14 +324,14 @@ bool raySphereIntersection(point3 e, point3 s, point3 c, float R, float &t) {
 	float t1 = (glm::dot(-d, e - c) - rootDiscriminant) / glm::dot(d, d);
 	float t2 = (glm::dot(-d, e - c) + rootDiscriminant) / glm::dot(d, d);
 
-	if (t1 < 0 && t2 < 0) {
+	if (t1 < safeT && t2 < safeT) {
 		return false;
 	}
-	else if (t1 <= t2 && t1 >= 0) {
+	else if ((t1 <= t2 && t1 >= safeT) || (t2 < safeT && t1 >= safeT)) {
 		t = t1;
 		return true;
 	}
-	else if (t2 <= t1 && t2 >= 0) {
+	else if ((t2 <= t1 && t2 >= safeT) || (t1 < safeT && t2 >= safeT)) {
 		float t = t2;
 		return true;
 	}
