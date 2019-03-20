@@ -163,12 +163,24 @@ colour3 light(point3 e, point3 p, glm::vec3 n, json material) {
 		// TODO: do we calculate ambient + diffuse + specular?
 		if (light["type"] == "directional") {
 			glm::vec3 direction = vector_to_vec3(light["direction"]);
-			glm::vec3 id = vector_to_vec3(light["color"]);
-			colour3 kd = vector_to_vec3(material["diffuse"]);
-
+			colour3 id = vector_to_vec3(light["color"]);
 			glm::vec3 l = glm::normalize(-direction);
 
+			// diffuse
+			colour3 kd = vector_to_vec3(material["diffuse"]);
 			color += id * kd * (glm::dot(n, l));
+
+			// specular if material supports specular component
+			if (material.find("specular") != material.end()) {
+				colour3 is = vector_to_vec3(light["color"]);
+				colour3 ks = vector_to_vec3(material["specular"]);
+				float alpha = material["shininess"];
+				glm::vec3 h = glm::normalize(l + v);
+
+				float dotP = glm::dot(n, h);
+				if (dotP < 0.0f) dotP = 0.0f;
+				color += is * ks * std::pow(dotP, alpha);
+			}
 		}
 
 		// TODO: do we calculate ambient + diffuse + specular?
