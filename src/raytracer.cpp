@@ -146,7 +146,6 @@ float intersect(point3 e, point3 s, glm::vec3 &normal, json &object) {
 
 colour3 light(point3 e, point3 p, glm::vec3 n, json material) {
 	colour3 color = colour3(0, 0, 0);
-
 	json &lights = scene["lights"];
 
 	n = glm::normalize(n);
@@ -173,9 +172,13 @@ colour3 light(point3 e, point3 p, glm::vec3 n, json material) {
 			}
 
 			// diffuse
-			colour3 id = vector_to_vec3(light["color"]);
-			colour3 kd = vector_to_vec3(material["diffuse"]);
-			color += id * kd * (glm::dot(n, l));
+			if (material.find("diffuse") != material.end()) {
+				colour3 id = vector_to_vec3(light["color"]);
+				colour3 kd = vector_to_vec3(material["diffuse"]);
+				float dotP = glm::dot(n, l);
+				if (dotP < 0.0f) dotP = 0.0f;
+				color += id * kd * dotP;
+			}
 
 			// specular if material supports specular component
 			if (material.find("specular") != material.end()) {
@@ -202,9 +205,13 @@ colour3 light(point3 e, point3 p, glm::vec3 n, json material) {
 			}
 
 			// diffuse
-			glm::vec3 id = vector_to_vec3(light["color"]);
-			colour3 kd = vector_to_vec3(material["diffuse"]);
-			color += id * kd * (glm::dot(n, l));
+			if (material.find("diffuse") != material.end()) {
+				glm::vec3 id = vector_to_vec3(light["color"]);
+				colour3 kd = vector_to_vec3(material["diffuse"]);
+				float dotP = glm::dot(n, l);
+				if (dotP < 0.0f) dotP = 0.0f;
+				color += id * kd * dotP;
+			}
 
 			// specular if material supports specular component
 			if (material.find("specular") != material.end()) {
@@ -238,10 +245,14 @@ colour3 light(point3 e, point3 p, glm::vec3 n, json material) {
 			}
 
 			// diffuse
-			glm::vec3 id = vector_to_vec3(light["color"]);
-			colour3 kd = vector_to_vec3(material["diffuse"]);
-			color += id * kd * (glm::dot(n, l));
-
+			if (material.find("diffuse") != material.end()) {
+				glm::vec3 id = vector_to_vec3(light["color"]);
+				colour3 kd = vector_to_vec3(material["diffuse"]);
+				float dotP = glm::dot(n, l);
+				if (dotP < 0.0f) dotP = 0.0f;
+				color += id * kd * dotP;
+			}
+			
 			// specular if material supports specular component
 			if (material.find("specular") != material.end()) {
 				colour3 is = vector_to_vec3(light["color"]);
