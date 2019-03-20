@@ -1,7 +1,7 @@
 {
   "camera": {
     "field":      60,
-    "background": [0, 0, 0.1]
+    "background": [0.1, 0.8, 0.9]
   },
   
 
@@ -25,7 +25,8 @@
         "ambient":   [0.2, 0.2, 0.2],
         "diffuse":   [0.56, 0.24, 0.12],
         "specular":  [0.4, 0.4, 0.4],
-        "shininess": 120.888832
+        "shininess": 120.888832,
+		"reflectence": 0.8
       }
     },
     {
@@ -53,13 +54,6 @@
       "type":     "point",
       "color":    [0.8, 0.8, 0],
       "position": [-1, 8, -5]
-    },
-	{
-      "type":     "spot",
-      "color":    [0.8, 0.8, 0.8],
-      "position": [0, 0, 0],
-	  "direction": [0, 0, -1],
-	  "cutoff": 30.0
     }
   ]
 }
