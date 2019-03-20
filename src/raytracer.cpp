@@ -59,6 +59,7 @@ void choose_scene(char const *fn) {
 }
 
 bool trace(const point3 &e, const point3 &s, colour3 &colour, bool pick) {
+	// TODO: for initial ray, we only want hit points that happen after VP
 	return castRay(e, s, colour);
 }
 
@@ -158,6 +159,8 @@ colour3 light(point3 e, point3 p, glm::vec3 n, json material) {
 			colour3 ia = vector_to_vec3(light["color"]);
 			colour3 ka = vector_to_vec3(material["ambient"]);
 			color += ia * ka;
+
+			continue;
 		}
 
 		// TODO: do we calculate ambient + diffuse + specular?
@@ -165,6 +168,11 @@ colour3 light(point3 e, point3 p, glm::vec3 n, json material) {
 			glm::vec3 direction = vector_to_vec3(light["direction"]);
 			colour3 id = vector_to_vec3(light["color"]);
 			glm::vec3 l = glm::normalize(-direction);
+
+			// dont light it if light doesnt reach it
+			if (pointInShadow(p, p + (l * 100.0f))) {
+				continue;
+			}
 
 			// diffuse
 			colour3 kd = vector_to_vec3(material["diffuse"]);
@@ -181,6 +189,8 @@ colour3 light(point3 e, point3 p, glm::vec3 n, json material) {
 				if (dotP < 0.0f) dotP = 0.0f;
 				color += is * ks * std::pow(dotP, alpha);
 			}
+
+			continue;
 		}
 
 		// TODO: do we calculate ambient + diffuse + specular?
@@ -189,13 +199,31 @@ colour3 light(point3 e, point3 p, glm::vec3 n, json material) {
 			glm::vec3 id = vector_to_vec3(light["color"]);
 			colour3 kd = vector_to_vec3(material["diffuse"]);
 
+			// dont add color if light doesnt reach the point
+			if (pointInShadow(p, lightPosition)) {
+				continue;
+			}
+
 			glm::vec3 l = glm::normalize(lightPosition - p);
 
 			color += id * kd * (glm::dot(n, l));
+
+			// TODO: finish this one specular???
 		}
 	}
 
 	return color;
+}
+
+bool pointInShadow(point3 p, point3 l) {
+	json object;
+	glm::vec3 normal;
+	float t = intersect(p, l, normal, object);
+
+	if (t > 0.0f && t < 1.0f)
+		return true;
+
+	return false;
 }
 
 bool rayTriangleIntersection(point3 e, point3 s, point3 a, point3 b, point3 c, glm::vec3 n, float &t) {
@@ -228,7 +256,7 @@ bool rayPlaneIntersection(point3 e, point3 s, point3 a, glm::vec3 n, float &t) {
 	if (denominator != 0) {
 		t = glm::dot(n, a - e) / denominator;
 
-		if (t < 1)
+		if (t < 0)
 			return false;
 
 		return true;
@@ -249,14 +277,14 @@ bool raySphereIntersection(point3 e, point3 s, point3 c, float R, float &t) {
 	float t1 = (glm::dot(-d, e - c) - rootDiscriminant) / glm::dot(d, d);
 	float t2 = (glm::dot(-d, e - c) + rootDiscriminant) / glm::dot(d, d);
 
-	if (t1 < 1 && t2 < 1) {
+	if (t1 < 0 && t2 < 0) {
 		return false;
 	}
-	else if (t1 <= t2 && t1 >= 1) {
+	else if (t1 <= t2 && t1 >= 0) {
 		t = t1;
 		return true;
 	}
-	else if (t2 <= t1 && t2 >= 1) {
+	else if (t2 <= t1 && t2 >= 0) {
 		float t = t2;
 		return true;
 	}

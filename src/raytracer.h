@@ -8,6 +8,7 @@
 #include <fstream>
 #include <string>
 #include <glm/gtx/string_cast.hpp>
+#include <iostream>
 
 #include "json.hpp"
 
@@ -24,6 +25,7 @@ bool trace(const point3 &e, const point3 &s, colour3 &colour, bool pick);
 bool castRay(const point3 &e, const point3 &s, colour3 &colour);
 float intersect(point3 e, point3 s, glm::vec3 &normal, json &object);
 colour3 light(point3 e, point3 p, glm::vec3 n, json material);
+bool pointInShadow(point3 p, point3 l);
 bool rayTriangleIntersection(point3 e, point3 s, point3 a, point3 b, point3 c, glm::vec3 n, float &t);
 bool rayPlaneIntersection(point3 e, point3 s, point3 a, glm::vec3 n, float &t);
 bool raySphereIntersection(point3 e, point3 s, point3 c, float R, float &t);
