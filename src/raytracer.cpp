@@ -332,7 +332,7 @@ bool raySphereIntersection(point3 e, point3 s, point3 c, float R, float &t) {
 		return true;
 	}
 	else if ((t2 <= t1 && t2 >= safeT) || (t1 < safeT && t2 >= safeT)) {
-		float t = t2;
+		t = t2;
 		return true;
 	}
 	else {
