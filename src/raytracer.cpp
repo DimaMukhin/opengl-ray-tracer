@@ -60,10 +60,10 @@ void choose_scene(char const *fn) {
 
 bool trace(const point3 &e, const point3 &s, colour3 &colour, bool pick) {
 	// TODO: for initial ray, we only want hit points that happen after VP
-	return castRay(e, s, colour);
+	return castRay(e, s, colour, -1.0);
 }
 
-bool castRay(const point3 &e, const point3 &s, colour3 &colour) {
+bool castRay(const point3 &e, const point3 &s, colour3 &colour, float ni) {
 	json object;
 	glm::vec3 n;
 	float t;
@@ -81,16 +81,7 @@ bool castRay(const point3 &e, const point3 &s, colour3 &colour) {
 	// TODO: refactor into own function
 	// TODO: implement recursion depth break case
 	if (material.find("reflectence") != material.end()) {
-		float km = material["reflectence"];
-		glm::vec3 v = glm::normalize(e - p);
-		glm::vec3 r = glm::normalize(2 * glm::dot(n, v) * n - v);
-		colour3 hitColor;
-		if (castRay(p, p + r, hitColor)) {
-			colour += hitColor * km;
-		}
-		else {
-			colour += background_colour * km;
-		}
+		reflect(e, p, n, material, colour);
 	}
 
 	// TODO: refactor into own function
@@ -98,11 +89,38 @@ bool castRay(const point3 &e, const point3 &s, colour3 &colour) {
 	if (material.find("transparency") != material.end()) {
 		float kt = material["transparency"];
 		colour3 hitColor;
-		if (castRay(p, p + (s - e), hitColor)) {
-			colour = (1 - kt) * colour + hitColor * kt;
+
+		if (material.find("refraction") != material.end()) {
+			float ni = 1.0f;
+			float nr = material["refraction"];
+
+			glm::vec3 vi = glm::normalize(s - e);
+			glm::vec3 N = glm::normalize(n);
+
+			// if ray should be refracted (otherwise reflect the ray TODO)
+			if (glm::dot(vi, N) > 1 - (std::pow(ni, 2) / std::pow(nr, 2))) {
+				glm::vec3 vr = ((ni * (vi - N * glm::dot(vi, N))) / nr) - (N * std::sqrt(1 - ((glm::pow(ni, 2) * (1 - std::pow(glm::dot(vi, N), 2))) / std::pow(nr, 2))));
+
+				if (castRay(p, p + vr, hitColor, nr)) {
+					colour = (1 - kt) * colour + hitColor * kt;
+				}
+				else {
+					colour = (1 - kt) * colour + background_colour * kt;
+				}
+			}
+			else {
+
+			}
+
+			
 		}
 		else {
-			colour = (1 - kt) * colour + background_colour * kt;
+			if (castRay(p, p + (s - e), hitColor, -1.0)) {
+				colour = (1 - kt) * colour + hitColor * kt;
+			}
+			else {
+				colour = (1 - kt) * colour + background_colour * kt;
+			}
 		}
 	}
 
@@ -310,6 +328,19 @@ bool pointInShadow(point3 p, point3 l) {
 		return true;
 
 	return false;
+}
+
+void reflect(point3 e, point3 p, glm::vec3 n, json material, colour3 &colour) {
+	float km = material["reflectence"];
+	glm::vec3 v = glm::normalize(e - p);
+	glm::vec3 r = glm::normalize(2 * glm::dot(n, v) * n - v);
+	colour3 hitColor;
+	if (castRay(p, p + r, hitColor, -1.0)) {
+		colour += hitColor * km;
+	}
+	else {
+		colour += background_colour * km;
+	}
 }
 
 bool rayTriangleIntersection(point3 e, point3 s, point3 a, point3 b, point3 c, glm::vec3 n, float &t) {
