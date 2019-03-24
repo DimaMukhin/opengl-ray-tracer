@@ -60,10 +60,14 @@ void choose_scene(char const *fn) {
 
 bool trace(const point3 &e, const point3 &s, colour3 &colour, bool pick) {
 	// TODO: for initial ray, we only want hit points that happen after VP
-	return castRay(e, s, colour, -1.0);
+	return castRay(e, s, colour, -1.0, 8);
 }
 
-bool castRay(const point3 &e, const point3 &s, colour3 &colour, float ni) {
+bool castRay(const point3 &e, const point3 &s, colour3 &colour, float ni, int iterations) {
+	if (iterations == 0) {
+		return false;
+	}
+
 	json object;
 	glm::vec3 n;
 	float t;
@@ -80,7 +84,7 @@ bool castRay(const point3 &e, const point3 &s, colour3 &colour, float ni) {
 
 	// TODO: implement recursion depth break case
 	if (material.find("reflectence") != material.end()) {
-		reflect(e, p, n, material["reflectence"], colour);
+		reflect(e, p, n, material["reflectence"], colour, iterations);
 	}
 
 	// TODO: implement recursion depth break case
@@ -88,10 +92,10 @@ bool castRay(const point3 &e, const point3 &s, colour3 &colour, float ni) {
 		float kt = material["transparency"];
 
 		if (material.find("refraction") != material.end()) {
-			refract(p, e, s, n, colour, ni, kt, material["refraction"]);
+			refract(p, e, s, n, colour, ni, kt, material["refraction"], iterations);
 		}
 		else {
-			transparentRay(p, s - e, colour, kt);
+			transparentRay(p, s - e, colour, kt, iterations);
 		}
 	}
 
@@ -301,11 +305,13 @@ bool pointInShadow(point3 p, point3 l) {
 	return false;
 }
 
-void reflect(point3 e, point3 p, glm::vec3 n, float km, colour3 &colour) {
+void reflect(point3 e, point3 p, glm::vec3 n, float km, colour3 &colour, int iterations) {
 	glm::vec3 v = glm::normalize(e - p);
 	glm::vec3 r = glm::normalize(2 * glm::dot(n, v) * n - v);
 	colour3 hitColor;
-	if (castRay(p, p + r, hitColor, -1.0)) {
+
+	// TODO: might cause a problem if we reflect inside the object
+	if (castRay(p, p + r, hitColor, -1.0, iterations - 1)) {
 		colour += hitColor * km;
 	}
 	else {
@@ -313,10 +319,10 @@ void reflect(point3 e, point3 p, glm::vec3 n, float km, colour3 &colour) {
 	}
 }
 
-void transparentRay(point3 p, point3 d, colour3 &colour, float kt) {
+void transparentRay(point3 p, point3 d, colour3 &colour, float kt, int iterations) {
 	colour3 hitColor;
 
-	if (castRay(p, p + d, hitColor, -1.0)) {
+	if (castRay(p, p + d, hitColor, -1.0, iterations - 1)) {
 		colour = (1 - kt) * colour + hitColor * kt;
 	}
 	else {
@@ -324,7 +330,7 @@ void transparentRay(point3 p, point3 d, colour3 &colour, float kt) {
 	}
 }
 
-void refract(point3 p, point3 e, point3 s, glm::vec3 n, colour3 &colour, float ni, float kt, float materialNR) {
+void refract(point3 p, point3 e, point3 s, glm::vec3 n, colour3 &colour, float ni, float kt, float materialNR, int iterations) {
 	colour3 hitColor;
 
 	if (ni > 0) {
@@ -335,7 +341,7 @@ void refract(point3 p, point3 e, point3 s, glm::vec3 n, colour3 &colour, float n
 
 		glm::vec3 vr = ((ni * (vi - N * glm::dot(vi, N))) / nr) - (N * std::sqrt(1 - ((glm::pow(ni, 2) * (1 - std::pow(glm::dot(vi, N), 2))) / std::pow(nr, 2))));
 
-		if (castRay(p, p + vr, hitColor, -1.0f)) {
+		if (castRay(p, p + vr, hitColor, -1.0f, iterations - 1)) {
 			colour = (1 - kt) * colour + hitColor * kt;
 		}
 		else {
@@ -349,11 +355,11 @@ void refract(point3 p, point3 e, point3 s, glm::vec3 n, colour3 &colour, float n
 		glm::vec3 vi = glm::normalize(s - e);
 		glm::vec3 N = glm::normalize(n);
 
-		// if ray should be refracted (otherwise reflect the ray TODO)
+		// if ray should be refracted
 		if (glm::dot(vi, N) <= 1 - (std::pow(ni, 2) / std::pow(nr, 2))) {
 			glm::vec3 vr = ((ni * (vi - N * glm::dot(vi, N))) / nr) - (N * std::sqrt(1 - ((glm::pow(ni, 2) * (1 - std::pow(glm::dot(vi, N), 2))) / std::pow(nr, 2))));
 
-			if (castRay(p, p + vr, hitColor, nr)) {
+			if (castRay(p, p + vr, hitColor, nr, iterations - 1)) {
 				colour = (1 - kt) * colour + hitColor * kt;
 			}
 			else {
@@ -361,7 +367,7 @@ void refract(point3 p, point3 e, point3 s, glm::vec3 n, colour3 &colour, float n
 			}
 		}
 		else {
-			reflect(e, p, n, 1.0f, colour);
+			reflect(e, p, n, 1.0f, colour, iterations - 1);
 		}
 	}
 }
