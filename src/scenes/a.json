@@ -14,7 +14,7 @@
         "ambient":   [0.3, 0.3, 0.3],
         "specular":  [1, 1, 1],
         "shininess": 25.6,
-		"reflectence": 0.8
+		"reflective": [0.8, 0.8, 0.8]
       }
     },
     {
@@ -26,7 +26,7 @@
         "diffuse":   [0.56, 0.24, 0.12],
         "specular":  [0.4, 0.4, 0.4],
         "shininess": 120.888832,
-		"reflectence": 0.8
+		"reflective": [0.8, 0.8, 0.8]
       }
     },
     {
@@ -36,7 +36,7 @@
       "material": {
         "ambient": [0.2, 0.2, 0.2],
         "diffuse": [0.56, 0.24, 0.12],
-		"reflectence": 0.8
+		"reflective": [0.8, 0.8, 0.8]
       }
     }
   ],

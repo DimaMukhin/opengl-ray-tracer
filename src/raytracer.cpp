@@ -83,8 +83,8 @@ bool castRay(const point3 &e, const point3 &s, colour3 &colour, float ni, int it
 	colour = light(e, p, n, material);
 
 	// TODO: implement recursion depth break case
-	if (material.find("reflectence") != material.end()) {
-		reflect(e, p, n, material["reflectence"], colour, iterations);
+	if (material.find("reflective") != material.end()) {
+		reflect(e, p, n, vector_to_vec3(material["reflective"]), colour, iterations);
 	}
 
 	// TODO: implement recursion depth break case
@@ -305,7 +305,7 @@ bool pointInShadow(point3 p, point3 l) {
 	return false;
 }
 
-void reflect(point3 e, point3 p, glm::vec3 n, float km, colour3 &colour, int iterations) {
+void reflect(point3 e, point3 p, glm::vec3 n, glm::vec3 km, colour3 &colour, int iterations) {
 	glm::vec3 v = glm::normalize(e - p);
 	glm::vec3 r = glm::normalize(2 * glm::dot(n, v) * n - v);
 	colour3 hitColor;
@@ -367,7 +367,7 @@ void refract(point3 p, point3 e, point3 s, glm::vec3 n, colour3 &colour, float n
 			}
 		}
 		else {
-			reflect(e, p, n, 1.0f, colour, iterations - 1);
+			reflect(e, p, n, glm::vec3(1.0f, 1.0f, 1.0f), colour, iterations - 1);
 		}
 	}
 }

@@ -26,7 +26,7 @@
         "diffuse":   [0.56, 0.24, 0.12],
         "specular":  [0.4, 0.4, 0.4],
         "shininess": 120.888832,
-		"reflectence": 0.8
+		"reflective": [0.8, 0.8, 0.8]
       }
     },
     {
