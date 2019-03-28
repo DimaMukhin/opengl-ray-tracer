@@ -13,9 +13,9 @@
 const char *WINDOW_TITLE = "Ray Tracing";
 const double FRAME_RATE_MS = 1;
 
-float xs[1<<16]; // big enough for a row of pixels
-colour3 colours[1<<16];
-GLuint Y, Window;
+colour3 texture[1<<16]; // big enough for a row of pixels
+point3 vertices[2]; // xy+u for start and end of line
+GLuint Window;
 int vp_width, vp_height;
 float drawing_y = 0;
 
@@ -55,31 +55,28 @@ void init(char *fn) {
 	GLuint buffer;
 	glGenBuffers( 1, &buffer );
 	glBindBuffer( GL_ARRAY_BUFFER, buffer );
-	glBufferData( GL_ARRAY_BUFFER, sizeof(xs) + sizeof(colours), NULL, GL_STATIC_DRAW );
+	glBufferData( GL_ARRAY_BUFFER, sizeof(vertices), NULL, GL_STATIC_DRAW );
 
 	// Load shaders and use the resulting shader program
 	GLuint program = InitShader( "v.glsl", "f.glsl" );
 	glUseProgram( program );
 
 	// set up vertex arrays
-	GLuint vColour = glGetAttribLocation( program, "vColour" );
-	glEnableVertexAttribArray( vColour );
-	glVertexAttribPointer( vColour, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(0) );
+	GLuint vPos = glGetAttribLocation( program, "vPos" );
+	glEnableVertexAttribArray( vPos );
+	glVertexAttribPointer( vPos, 3, GL_FLOAT, GL_FALSE, 0, 0 );
 
-	GLuint xPos = glGetAttribLocation( program, "xPos" );
-	glEnableVertexAttribArray( xPos );
-	glVertexAttribPointer( xPos, 1, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(sizeof(colours)) );
-
-	Y = glGetUniformLocation(program, "Y");
-	Window = glGetUniformLocation(program, "Window");
+	Window = glGetUniformLocation( program, "Window" );
 
 	// glClearColor( background_colour[0], background_colour[1], background_colour[2], 1 );
 	glClearColor( 0.7, 0.7, 0.8, 1 );
-    
-	for (int x = 0; x < sizeof(xs)/sizeof(float); x++) {
-		xs[x] = x;
-	}
-	glBufferSubData( GL_ARRAY_BUFFER, sizeof(colours), sizeof(xs), xs);
+
+	// set up a 1D texture for each scanline of output
+	GLuint textureID;
+	glGenTextures( 1, &textureID );
+	glBindTexture( GL_TEXTURE_1D, textureID );
+	glTexParameteri( GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
+	glTexParameteri( GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
 }
 
 //----------------------------------------------------------------------------
@@ -103,18 +100,31 @@ void display( void ) {
 		// only recalculate if this is a new scanline
 		if (drawing_y == int(drawing_y)) {
 
-			// this would be better with a single-pixel quad and a texture
 			for (int x = 0; x < vp_width; x++) {
-				if (!trace(eye, s(x, y), colours[x], false)) {
-					colours[x] = background_colour;
+				if (!trace(eye, s(x, y), texture[x], false)) {
+					texture[x] = background_colour;
 				}
 			}
 
-			glBufferSubData( GL_ARRAY_BUFFER, 0, vp_width * sizeof(colour3), colours);
+			// to ensure a power-of-two texture, get the next highest power of two
+			// https://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
+			unsigned int v; // compute the next highest power of 2 of 32-bit v
+			v = vp_width;
+			v--;
+			v |= v >> 1;
+			v |= v >> 2;
+			v |= v >> 4;
+			v |= v >> 8;
+			v |= v >> 16;
+			v++;
+			
+			glTexImage1D( GL_TEXTURE_1D, 0, GL_RGB, v, 0, GL_RGB, GL_FLOAT, texture );
+			vertices[0] = point3(0, y, 0);
+			vertices[1] = point3(v, y, 1);
+			glBufferSubData( GL_ARRAY_BUFFER, 0, 2 * sizeof(point3), vertices);
 		}
 
-		glUniform1f( Y, y );
-		glDrawArrays( GL_POINTS, 0, vp_width );
+		glDrawArrays( GL_LINES, 0, 2 );
 		
 		glFlush();
 		glFinish();
@@ -144,7 +154,7 @@ void mouse( int button, int state, int x, int y ) {
 	y = vp_height - y - 1;
 	if ( state == GLUT_DOWN ) {
 		switch( button ) {
-			case GLUT_LEFT_BUTTON:
+		case GLUT_LEFT_BUTTON:
 			colour3 c;
 			point3 uvw = s(x, y);
 			std::cout << std::endl;

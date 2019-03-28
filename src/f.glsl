@@ -1,10 +1,11 @@
 #version 150
 
-in vec3 colour;
+in float u;
 out vec4 out_colour;
+uniform sampler1D tex_sampler;
 
 void main() 
 { 
-  out_colour.rgb = colour;
+  out_colour.rgb = texture( tex_sampler, u ).rgb;
   out_colour.a = 1;
 }
