@@ -257,7 +257,7 @@ colour3 light(point3 e, point3 p, glm::vec3 n, json material) {
 			float cutoff = light["cutoff"];
 
 			// dont calculate light if point is outside the cutoff angle
-			if (glm::dot(l, -direction) < glm::cos(glm::radians(cutoff / 2))) {
+			if (glm::dot(l, -direction) < glm::cos(glm::radians(cutoff))) {
 				continue;
 			}
 
