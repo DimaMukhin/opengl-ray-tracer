@@ -82,14 +82,12 @@ bool castRay(const point3 &e, const point3 &s, colour3 &colour, float ni, int it
 
 	colour = light(e, p, n, material);
 
-	// TODO: implement recursion depth break case
 	if (material.find("reflective") != material.end()) {
 		reflect(e, p, n, vector_to_vec3(material["reflective"]), colour, iterations);
 	}
 
-	// TODO: implement recursion depth break case
-	if (material.find("transparency") != material.end()) {
-		float kt = material["transparency"];
+	if (material.find("transmissive") != material.end()) {
+		glm::vec3 kt = vector_to_vec3(material["transmissive"]);
 
 		if (material.find("refraction") != material.end()) {
 			refract(p, e, s, n, colour, ni, kt, material["refraction"], iterations);
@@ -319,18 +317,18 @@ void reflect(point3 e, point3 p, glm::vec3 n, glm::vec3 km, colour3 &colour, int
 	}
 }
 
-void transparentRay(point3 p, point3 d, colour3 &colour, float kt, int iterations) {
+void transparentRay(point3 p, point3 d, colour3 &colour, glm::vec3 kt, int iterations) {
 	colour3 hitColor;
 
 	if (castRay(p, p + d, hitColor, -1.0, iterations - 1)) {
-		colour = (1 - kt) * colour + hitColor * kt;
+		colour = (1.0f - kt) * colour + hitColor * kt;
 	}
 	else {
-		colour = (1 - kt) * colour + background_colour * kt;
+		colour = (1.0f - kt) * colour + background_colour * kt;
 	}
 }
 
-void refract(point3 p, point3 e, point3 s, glm::vec3 n, colour3 &colour, float ni, float kt, float materialNR, int iterations) {
+void refract(point3 p, point3 e, point3 s, glm::vec3 n, colour3 &colour, float ni, glm::vec3 kt, float materialNR, int iterations) {
 	colour3 hitColor;
 
 	if (ni > 0) {
@@ -342,10 +340,10 @@ void refract(point3 p, point3 e, point3 s, glm::vec3 n, colour3 &colour, float n
 		glm::vec3 vr = ((ni * (vi - N * glm::dot(vi, N))) / nr) - (N * std::sqrt(1 - ((glm::pow(ni, 2) * (1 - std::pow(glm::dot(vi, N), 2))) / std::pow(nr, 2))));
 
 		if (castRay(p, p + vr, hitColor, -1.0f, iterations - 1)) {
-			colour = (1 - kt) * colour + hitColor * kt;
+			colour = (1.0f - kt) * colour + hitColor * kt;
 		}
 		else {
-			colour = (1 - kt) * colour + background_colour * kt;
+			colour = (1.0f - kt) * colour + background_colour * kt;
 		}
 	}
 	else {
@@ -360,10 +358,10 @@ void refract(point3 p, point3 e, point3 s, glm::vec3 n, colour3 &colour, float n
 			glm::vec3 vr = ((ni * (vi - N * glm::dot(vi, N))) / nr) - (N * std::sqrt(1 - ((glm::pow(ni, 2) * (1 - std::pow(glm::dot(vi, N), 2))) / std::pow(nr, 2))));
 
 			if (castRay(p, p + vr, hitColor, nr, iterations - 1)) {
-				colour = (1 - kt) * colour + hitColor * kt;
+				colour = (1.0f - kt) * colour + hitColor * kt;
 			}
 			else {
-				colour = (1 - kt) * colour + background_colour * kt;
+				colour = (1.0f - kt) * colour + background_colour * kt;
 			}
 		}
 		else {
