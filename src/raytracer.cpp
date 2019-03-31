@@ -29,6 +29,10 @@ glm::vec3 vector_to_vec3(const std::vector<float> &v) {
 	return glm::vec3(v[0], v[1], v[2]);
 }
 
+glm::vec3 clamp(glm::vec3 vector) {
+	return glm::clamp(vector, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f));
+}
+
 /****************************************************************************/
 
 void choose_scene(char const *fn) {
@@ -81,6 +85,7 @@ bool castRay(const point3 &e, const point3 &s, colour3 &colour, float ni, int it
 	json material = object["material"];
 
 	colour = light(e, p, n, material);
+	colour = clamp(colour);
 
 	if (material.find("reflective") != material.end()) {
 		reflect(e, p, n, vector_to_vec3(material["reflective"]), colour, iterations);
@@ -178,6 +183,7 @@ colour3 light(point3 e, point3 p, glm::vec3 n, json material) {
 			colour3 ia = vector_to_vec3(light["color"]);
 			colour3 ka = vector_to_vec3(material["ambient"]);
 			color += ia * ka;
+			color = clamp(color);
 
 			continue;
 		}
@@ -198,6 +204,7 @@ colour3 light(point3 e, point3 p, glm::vec3 n, json material) {
 				float dotP = glm::dot(n, l);
 				if (dotP < 0.0f) dotP = 0.0f;
 				color += id * kd * dotP;
+				color = clamp(color);
 			}
 
 			// specular if material supports specular component
@@ -210,6 +217,7 @@ colour3 light(point3 e, point3 p, glm::vec3 n, json material) {
 				float dotP = glm::dot(n, h);
 				if (dotP < 0.0f) dotP = 0.0f;
 				color += is * ks * std::pow(dotP, alpha);
+				color = clamp(color);
 			}
 
 			continue;
@@ -231,6 +239,7 @@ colour3 light(point3 e, point3 p, glm::vec3 n, json material) {
 				float dotP = glm::dot(n, l);
 				if (dotP < 0.0f) dotP = 0.0f;
 				color += id * kd * dotP;
+				color = clamp(color);
 			}
 
 			// specular if material supports specular component
@@ -243,6 +252,7 @@ colour3 light(point3 e, point3 p, glm::vec3 n, json material) {
 				float dotP = glm::dot(n, h);
 				if (dotP < 0.0f) dotP = 0.0f;
 				color += is * ks * std::pow(dotP, alpha);
+				color = clamp(color);
 			}
 
 			continue;
@@ -271,6 +281,7 @@ colour3 light(point3 e, point3 p, glm::vec3 n, json material) {
 				float dotP = glm::dot(n, l);
 				if (dotP < 0.0f) dotP = 0.0f;
 				color += id * kd * dotP;
+				color = clamp(color);
 			}
 			
 			// specular if material supports specular component
@@ -283,6 +294,7 @@ colour3 light(point3 e, point3 p, glm::vec3 n, json material) {
 				float dotP = glm::dot(n, h);
 				if (dotP < 0.0f) dotP = 0.0f;
 				color += is * ks * std::pow(dotP, alpha);
+				color = clamp(color);
 			}
 
 			continue;
@@ -310,10 +322,13 @@ void reflect(point3 e, point3 p, glm::vec3 n, glm::vec3 km, colour3 &colour, int
 
 	// TODO: might cause a problem if we reflect inside the object
 	if (castRay(p, p + r, hitColor, -1.0, iterations - 1)) {
+		hitColor = clamp(hitColor);
 		colour += hitColor * km;
+		colour = clamp(colour);
 	}
 	else {
 		colour += background_colour * km;
+		colour = clamp(colour);
 	}
 }
 
@@ -321,10 +336,13 @@ void transparentRay(point3 p, point3 d, colour3 &colour, glm::vec3 kt, int itera
 	colour3 hitColor;
 
 	if (castRay(p, p + d, hitColor, -1.0, iterations - 1)) {
+		hitColor = clamp(hitColor);
 		colour = (1.0f - kt) * colour + hitColor * kt;
+		colour = clamp(colour);
 	}
 	else {
 		colour = (1.0f - kt) * colour + background_colour * kt;
+		colour = clamp(colour);
 	}
 }
 
@@ -340,10 +358,13 @@ void refract(point3 p, point3 e, point3 s, glm::vec3 n, colour3 &colour, float n
 		glm::vec3 vr = ((ni * (vi - N * glm::dot(vi, N))) / nr) - (N * std::sqrt(1 - ((glm::pow(ni, 2) * (1 - std::pow(glm::dot(vi, N), 2))) / std::pow(nr, 2))));
 
 		if (castRay(p, p + vr, hitColor, -1.0f, iterations - 1)) {
+			hitColor = clamp(hitColor);
 			colour = (1.0f - kt) * colour + hitColor * kt;
+			colour = clamp(colour);
 		}
 		else {
 			colour = (1.0f - kt) * colour + background_colour * kt;
+			colour = clamp(colour);
 		}
 	}
 	else {
@@ -358,10 +379,13 @@ void refract(point3 p, point3 e, point3 s, glm::vec3 n, colour3 &colour, float n
 			glm::vec3 vr = ((ni * (vi - N * glm::dot(vi, N))) / nr) - (N * std::sqrt(1 - ((glm::pow(ni, 2) * (1 - std::pow(glm::dot(vi, N), 2))) / std::pow(nr, 2))));
 
 			if (castRay(p, p + vr, hitColor, nr, iterations - 1)) {
+				hitColor = clamp(hitColor);
 				colour = (1.0f - kt) * colour + hitColor * kt;
+				colour = clamp(colour);
 			}
 			else {
 				colour = (1.0f - kt) * colour + background_colour * kt;
+				colour = clamp(colour);
 			}
 		}
 		else {
