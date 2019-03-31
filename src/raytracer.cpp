@@ -67,7 +67,7 @@ void choose_scene(char const *fn) {
 }
 
 bool trace(const point3 &e, const point3 &s, colour3 &colour, bool pick) {
-	return castRay(e, s, colour, -1.0, 8);
+	return castRay(e, s, colour, -1.0, 20);
 }
 
 /*
