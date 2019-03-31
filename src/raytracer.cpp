@@ -1,4 +1,7 @@
-// The JSON library allows you to reference JSON arrays like C++ vectors and JSON objects like C++ maps.
+/*
+	Assignment 3
+	By Dima Mukhin 7773184
+*/
 
 #include "raytracer.h"
 
@@ -29,6 +32,7 @@ glm::vec3 vector_to_vec3(const std::vector<float> &v) {
 	return glm::vec3(v[0], v[1], v[2]);
 }
 
+// clamp a vector between 0,0,0 and 1,1,1
 glm::vec3 clamp(glm::vec3 vector) {
 	return glm::clamp(vector, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f));
 }
@@ -63,10 +67,17 @@ void choose_scene(char const *fn) {
 }
 
 bool trace(const point3 &e, const point3 &s, colour3 &colour, bool pick) {
-	// TODO: for initial ray, we only want hit points that happen after VP
 	return castRay(e, s, colour, -1.0, 8);
 }
 
+/*
+cast a ray in the scene
+	e: start point of the ray
+	s: intersection point of the ray
+	colour: output colour of casted ray (supports all features)
+	ni: current index of refraction (if -1.0, ni is by default 1.0)
+	iterations: # of iterations left (stop recursion when iterations = 0)
+*/
 bool castRay(const point3 &e, const point3 &s, colour3 &colour, float ni, int iterations) {
 	if (iterations == 0) {
 		return false;
@@ -76,6 +87,7 @@ bool castRay(const point3 &e, const point3 &s, colour3 &colour, float ni, int it
 	glm::vec3 n;
 	float t;
 
+	// find closest intersection in the scene and get the normal and object at intersection
 	t = intersect(e, s, n, object);
 
 	if (t < 0)
@@ -84,16 +96,20 @@ bool castRay(const point3 &e, const point3 &s, colour3 &colour, float ni, int it
 	point3 p = e + (s - e) * t;
 	json material = object["material"];
 
+	// light the point of intersection
 	colour = light(e, p, n, material);
 	colour = clamp(colour);
 
+	// if object has a reflative property, reflect the ray and update color
 	if (material.find("reflective") != material.end()) {
 		reflect(e, p, n, vector_to_vec3(material["reflective"]), colour, iterations);
 	}
 
+	// if object has transmissive property...
 	if (material.find("transmissive") != material.end()) {
 		glm::vec3 kt = vector_to_vec3(material["transmissive"]);
 
+		// if object has refraction proprty, refract the ray. otherwise, perform simple transparent ray
 		if (material.find("refraction") != material.end()) {
 			refract(p, e, s, n, colour, ni, kt, material["refraction"], iterations);
 		}
@@ -105,11 +121,19 @@ bool castRay(const point3 &e, const point3 &s, colour3 &colour, float ni, int it
 	return true;
 }
 
+/*
+find closest intersection in the scene, return -1 if no intersection
+	e: origin of ray
+	s: intersection of ray
+	normal: output normal at intersection
+	object: output object at intersection
+*/
 float intersect(point3 e, point3 s, glm::vec3 &normal, json &object) {
 	bool hit = false;
 	float minT = -1.0f;
 	float safeT = 0.001f;
 
+	// for all objects in the scene
 	json &objects = scene["objects"];
 	for (json::iterator it = objects.begin(); it != objects.end(); ++it) {
 		json &currObject = *it;
@@ -169,6 +193,13 @@ float intersect(point3 e, point3 s, glm::vec3 &normal, json &object) {
 	return minT;
 }
 
+/*
+light ponit of intersection
+	e: origin of ray (eye position initially)
+	p: point of intersection
+	n: normal at point of intersection
+	material: material properties of object at point of intersection
+*/
 colour3 light(point3 e, point3 p, glm::vec3 n, json material) {
 	colour3 color = colour3(0, 0, 0);
 	json &lights = scene["lights"];
@@ -176,6 +207,7 @@ colour3 light(point3 e, point3 p, glm::vec3 n, json material) {
 	n = glm::normalize(n);
 	glm::vec3 v = glm::normalize(e - p);
 
+	// for all lights in the scene...
 	for (json::iterator it = lights.begin(); it != lights.end(); ++it) {
 		json &light = *it;
 
@@ -304,6 +336,11 @@ colour3 light(point3 e, point3 p, glm::vec3 n, json material) {
 	return color;
 }
 
+/*
+Point in shadow test
+	p: the point to test
+	l: light position
+*/
 bool pointInShadow(point3 p, point3 l) {
 	json object;
 	glm::vec3 normal;
@@ -315,12 +352,20 @@ bool pointInShadow(point3 p, point3 l) {
 	return false;
 }
 
+/*
+Reflect the ray and find colour (recursive)
+	e: origin point of ray
+	p: point of intersection
+	n: normal at point of intersection
+	km: mirror constant property of object
+	colour: output color
+	interations: # of recursive iterations left
+*/
 void reflect(point3 e, point3 p, glm::vec3 n, glm::vec3 km, colour3 &colour, int iterations) {
 	glm::vec3 v = glm::normalize(e - p);
 	glm::vec3 r = glm::normalize(2 * glm::dot(n, v) * n - v);
 	colour3 hitColor;
 
-	// TODO: might cause a problem if we reflect inside the object
 	if (castRay(p, p + r, hitColor, -1.0, iterations - 1)) {
 		hitColor = clamp(hitColor);
 		colour += hitColor * km;
@@ -332,6 +377,14 @@ void reflect(point3 e, point3 p, glm::vec3 n, glm::vec3 km, colour3 &colour, int
 	}
 }
 
+/*
+cast transparent ray and update color
+	p: point of intersection
+	d: direction of transparent ray
+	colour: output color
+	kt: transparent constant for material
+	iteractions: # of iterations left
+*/
 void transparentRay(point3 p, point3 d, colour3 &colour, glm::vec3 kt, int iterations) {
 	colour3 hitColor;
 
@@ -346,6 +399,18 @@ void transparentRay(point3 p, point3 d, colour3 &colour, glm::vec3 kt, int itera
 	}
 }
 
+/*
+reflect ray and update color
+	p: point of intersection
+	e: eye position
+	s: point of intersection of ray
+	n: normal at point of intersection
+	colour: output color
+	ni: current index of refraction
+	kt: transparency constant for material
+	materialNR: material's index of refraction
+	iterations: # of iterations left
+*/
 void refract(point3 p, point3 e, point3 s, glm::vec3 n, colour3 &colour, float ni, glm::vec3 kt, float materialNR, int iterations) {
 	colour3 hitColor;
 
@@ -374,7 +439,6 @@ void refract(point3 p, point3 e, point3 s, glm::vec3 n, colour3 &colour, float n
 		glm::vec3 vi = glm::normalize(s - e);
 		glm::vec3 N = glm::normalize(n);
 
-		// if ray should be refracted
 		if (glm::dot(vi, N) <= 1 - (std::pow(ni, 2) / std::pow(nr, 2))) {
 			glm::vec3 vr = ((ni * (vi - N * glm::dot(vi, N))) / nr) - (N * std::sqrt(1 - ((glm::pow(ni, 2) * (1 - std::pow(glm::dot(vi, N), 2))) / std::pow(nr, 2))));
 
@@ -394,6 +458,16 @@ void refract(point3 p, point3 e, point3 s, glm::vec3 n, colour3 &colour, float n
 	}
 }
 
+/*
+check for ray triangle itersection
+	e: eye position
+	s: ray intersection position
+	a: point a of triangle
+	b: point b of triangle
+	c: point c of triangle
+	n: normal of triangle
+	t: output t value for intersection
+*/
 bool rayTriangleIntersection(point3 e, point3 s, point3 a, point3 b, point3 c, glm::vec3 n, float &t) {
 	n = glm::normalize(n);
 	float planeT;
@@ -415,6 +489,14 @@ bool rayTriangleIntersection(point3 e, point3 s, point3 a, point3 b, point3 c, g
 	return false;
 }
 
+/*
+ray plane intersection test
+	e: eye position
+	s: ray intersection position
+	a: plane position
+	n: plane normal
+	t: output t value for point of intersection
+*/
 bool rayPlaneIntersection(point3 e, point3 s, point3 a, glm::vec3 n, float &t) {
 	n = glm::normalize(n);
 	glm::vec3 d = s - e;
@@ -433,6 +515,14 @@ bool rayPlaneIntersection(point3 e, point3 s, point3 a, glm::vec3 n, float &t) {
 	return false;
 }
 
+/*
+ray sphere intersection test
+	e: eye position
+	s: ray intersection position
+	c: sphere center point
+	R: sphere radius length
+	t: point of intersection t value
+*/
 bool raySphereIntersection(point3 e, point3 s, point3 c, float R, float &t) {
 	glm::vec3 d = s - e;
 	float safeT = 0.001f;
