@@ -67,7 +67,7 @@ void choose_scene(char const *fn) {
 }
 
 bool trace(const point3 &e, const point3 &s, colour3 &colour, bool pick) {
-	return castRay(e, s, colour, -1.0, 20);
+	return castRay(e, s, colour, -1.0, 8);
 }
 
 /*
@@ -211,7 +211,7 @@ colour3 light(point3 e, point3 p, glm::vec3 n, json material) {
 	for (json::iterator it = lights.begin(); it != lights.end(); ++it) {
 		json &light = *it;
 
-		if (light["type"] == "ambient") {
+		if (light["type"] == "ambient" && material.find("diffuse") != material.end()) {
 			colour3 ia = vector_to_vec3(light["color"]);
 			colour3 ka = vector_to_vec3(material["ambient"]);
 			color += ia * ka;

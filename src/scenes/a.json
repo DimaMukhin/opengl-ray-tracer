@@ -8,25 +8,34 @@
   "objects": [
     {
       "type":        "sphere",
-      "radius":      1.0,
-      "position":    [-0.5, 1.0, -4],
+      "radius":      0.9,
+      "position":    [-0.9, 0.035, -4.65],
       "material": {
-        "ambient":   [0.3, 0.3, 0.3],
-        "specular":  [1, 1, 1],
-        "shininess": 25.6,
-		"transmissive": [0.8, 0.8, 0.8],
-        "refraction":   1.33
+        "ambient":      [0.133, 0.333, 0.133],
+        "diffuse":      [0.4, 1, 0.4],
+        "specular":     [0.3, 0.3, 0.3],
+        "shininess":    75
       }
     },
-    {
+	{
       "type":        "sphere",
-      "radius":      2.5,
-      "position":    [1.5, 1.5, -8.5],
+      "radius":      1.3,
+      "position":    [0.05, 1.4, -7.5],
       "material": {
-        "ambient":   [0.56, 0.2, 0.2],
-        "diffuse":   [0.56, 0.24, 0.12],
-        "specular":  [0.4, 0.4, 0.4],
-        "shininess": 120.888832
+         "ambient":   [0.1745, 0.01175, 0.01175],
+         "diffuse":   [0.61424, 0.04136, 0.04136],
+         "specular":  [0.727811, 0.626959, 0.626959],
+         "shininess": 76.8
+      }
+    },
+	{
+      "type":      "plane",
+      "position":  [0, -0.9, -4.8],
+      "normal":    [0, 1, 0.4],
+      "material": {
+         "ambient":    [0.1, 0.1, 0.1],
+         "specular":   [0.5, 0.5, 0.5],
+         "shininess":  1
       }
     }
   ],
@@ -45,6 +54,13 @@
       "type":     "point",
       "color":    [0.8, 0.8, 0],
       "position": [-1, 8, -5]
+    },
+	{
+      "type":      "spot",
+      "color":     [0.4, 0.4, 0.4],
+      "position":  [0, 0, 0],
+      "direction": [0.0, 0.0, -1],
+      "cutoff":    10
     }
   ]
 }

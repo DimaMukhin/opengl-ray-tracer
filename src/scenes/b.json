@@ -1,32 +1,32 @@
 {
   "camera": {
     "field":      60,
-    "background": [0.1, 0.8, 0.9]
+    "background": [0, 0, 0.1]
   },
   
-
   "objects": [
     {
       "type":        "sphere",
       "radius":      1.0,
+      "position":    [0, 0, -6],
+      "material": {
+        "ambient":   [0.3, 0.3, 0.3],
+        "diffuse":   [1, 0.2, 0.1],
+        "specular":  [1, 1, 1],
+        "shininess": 25.6,
+        "reflective": [0.5, 0.5, 0.5]
+      }
+    },
+	{
+      "type":        "sphere",
+      "radius":      0.5,
       "position":    [0, 0, -4],
       "material": {
         "ambient":   [0.3, 0.3, 0.3],
-        "diffuse":   [1, 0, 0],
+        "diffuse":   [0, 0.3, 0.6],
         "specular":  [1, 1, 1],
-        "shininess": 25.6
-      }
-    },
-    {
-      "type":        "sphere",
-      "radius":      2.5,
-      "position":    [1.5, 1.5, -8.5],
-      "material": {
-        "ambient":   [0.2, 0.2, 0.2],
-        "diffuse":   [0.56, 0.24, 0.12],
-        "specular":  [0.4, 0.4, 0.4],
-        "shininess": 120.888832,
-		"reflective": [0.8, 0.8, 0.8]
+        "shininess": 25.6,
+		"transmissive": [0.3, 0.3, 0.3]
       }
     },
     {
@@ -43,17 +43,19 @@
   "lights": [
     {
       "type":  "ambient",
-      "color": [0.5, 0.5, 0.5]
+      "color": [0.7, 0.7, 0.7]
     },
     {
       "type":      "directional",
-      "color":     [0.8, 0.8, 0.8],
-      "direction": [0, -1, 0]
+      "color":     [0.9, 0.9, 0.9],
+      "direction": [-0.1, -1, 0]
     },
     {
-      "type":     "point",
-      "color":    [0.8, 0.8, 0],
-      "position": [-1, 8, -5]
+      "type":      "spot",
+      "color":     [0.4, 0.4, 0.4],
+      "position":  [0, 0, 0],
+      "direction": [0.0, 0.0, -1],
+      "cutoff":    15
     }
   ]
 }
